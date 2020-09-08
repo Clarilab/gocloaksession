@@ -1,4 +1,4 @@
-package main
+package gocloak_session
 
 import (
 	"testing"
@@ -14,8 +14,8 @@ const (
 	gocloakClientSecret = "gocloak-secret"
 )
 
-func InitializeSession(t testing.TB) *GoCloakSession {
-	return NewSession(gocloakClientID, gocloakClientSecret, gocloakRealm, gocloakHostname)
+func InitializeSession(t testing.TB) *goCloakSession {
+	return NewSession(gocloakClientID, gocloakClientSecret, gocloakRealm, gocloakHostname).(*goCloakSession)
 }
 
 func Test_GetKeycloakAuthToken_Authentication(t *testing.T) {

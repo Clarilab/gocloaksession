@@ -1,4 +1,4 @@
-package main
+package gocloak_session
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GoCloakSession struct {
+type goCloakSession struct {
 	clientID     string
 	clientSecret string
 	realm        string
@@ -15,8 +15,8 @@ type GoCloakSession struct {
 	token        *gocloak.JWT
 }
 
-func NewSession(clientId, clientSecret, realm, uri string) *GoCloakSession {
-	return &GoCloakSession{
+func NewSession(clientId, clientSecret, realm, uri string) GoCloakSession {
+	return &goCloakSession{
 		clientID:     clientId,
 		clientSecret: clientSecret,
 		realm:        realm,
@@ -24,7 +24,7 @@ func NewSession(clientId, clientSecret, realm, uri string) *GoCloakSession {
 	}
 }
 
-func (session *GoCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
+func (session *goCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
 	if session.token != nil {
 		token, _, err := session.gocloak.DecodeAccessToken(context.Background(), session.token.AccessToken, session.realm, "")
 		if err == nil && token.Valid {
@@ -48,7 +48,7 @@ func (session *GoCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
 	return session.token, nil
 }
 
-func (session *GoCloakSession) refreshToken() error {
+func (session *goCloakSession) refreshToken() error {
 	jwt, err := session.gocloak.RefreshToken(context.Background(), session.token.RefreshToken, session.clientID, session.clientSecret, session.realm)
 	if err != nil {
 		return errors.Wrap(err, "could not refresh keycloak-token")
@@ -59,7 +59,7 @@ func (session *GoCloakSession) refreshToken() error {
 	return nil
 }
 
-func (session *GoCloakSession) authenticate() error {
+func (session *goCloakSession) authenticate() error {
 	jwt, err := session.gocloak.LoginClient(context.Background(), session.clientID, session.clientSecret, session.realm)
 	if err != nil {
 		return errors.Wrap(err, "could not login to keycloak")
