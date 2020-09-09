@@ -7,5 +7,4 @@ require (
 	github.com/go-resty/resty/v2 v2.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.6.1
-	gopkg.in/resty.v1 v1.12.0
 )
