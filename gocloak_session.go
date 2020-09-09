@@ -11,5 +11,5 @@ type GoCloakSession interface {
 	GetKeycloakAuthToken() (*gocloak.JWT, error)
 
 	// Sets the Authentication Header for the response
-	AddAuthTokenToRequest(*resty.Client) error
+	AddAuthTokenToRequest(*resty.Client, *resty.Request) error
 }

@@ -71,15 +71,16 @@ func (session *goCloakSession) authenticate() error {
 	return nil
 }
 
-func (session *goCloakSession) AddAuthTokenToRequest(client *resty.Client) error {
-	if session.token == nil || session.token.AccessToken == "" {
-		return errors.New("The session does not contain an AccessToken")
+func (session *goCloakSession) AddAuthTokenToRequest(client *resty.Client, request *resty.Request) error {
+	token, err := session.GetKeycloakAuthToken()
+	if err != nil {
+		return err
 	}
 
-	if session.token.TokenType != "bearer" {
-		client.SetAuthScheme(session.token.TokenType)
+	if token.TokenType != "bearer" {
+		request.SetAuthScheme(token.TokenType)
 	}
-	client.SetAuthToken(session.token.AccessToken)
+	request.SetAuthToken(token.AccessToken)
 
 	return nil
 }
