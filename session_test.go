@@ -96,7 +96,7 @@ func Test_AddAccessTokenToResponse_OK(t *testing.T) {
 	err := session.authenticate()
 	require.NoError(t, err, "authentication failed")
 
-	err = session.AddAccessTokenToRequest(&restyClient)
+	err = session.AddAuthTokenToRequest(&restyClient)
 
 	assert.NoError(t, err, "failed to add token to response")
 	assert.Equal(t, session.token.AccessToken, restyClient.Token, "sets an token, that is not the AccessToken")
@@ -107,7 +107,7 @@ func Test_AddAccessTokenToResponse_MissingToken(t *testing.T) {
 
 	session := InitializeSession(t)
 
-	err := session.AddAccessTokenToRequest(&restyClient)
+	err := session.AddAuthTokenToRequest(&restyClient)
 
 	assert.Error(t, err, "even with a missing token the authorization was set")
 }

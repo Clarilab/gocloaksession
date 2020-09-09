@@ -71,7 +71,7 @@ func (session *goCloakSession) authenticate() error {
 	return nil
 }
 
-func (session *goCloakSession) AddAccessTokenToRequest(client *resty.Client) error {
+func (session *goCloakSession) AddAuthTokenToRequest(client *resty.Client) error {
 	if session.token == nil || session.token.AccessToken == "" {
 		return errors.New("The session does not contain an AccessToken")
 	}

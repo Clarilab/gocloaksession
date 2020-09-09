@@ -20,7 +20,7 @@ type GoCloakSession interface {
 	GetKeycloakAuthToken() (*gocloak.JWT, error)
 
 	// Sets the Authentication Header for the response
-	AddAccessTokenToRequest(*resty.Client) error
+	AddAuthTokenToRequest(*resty.Client) error
 }
 
 ```
@@ -35,7 +35,7 @@ session := NewSession(clientId, clientSecret, realm, uri)
 token, err := session.GetKeycloakAuthToken()
 
 // Optionally, set the AuthToken for a resty.Client
-err = session.AddAccessTokenToRequest(&restyClient)
+err = session.AddAuthTokenToRequest(&restyClient)
 ```
 
 ## Developing & Testing
