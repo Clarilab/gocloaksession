@@ -3,6 +3,7 @@ package gocloak_session
 import (
 	"testing"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -85,4 +86,28 @@ func Test_authenticate(t *testing.T) {
 
 	assert.NoError(t, err, "authenticate failed")
 	assert.NotZero(t, session.token.AccessToken, "Token is not set")
+}
+
+func Test_AddAccessTokenToResponse_OK(t *testing.T) {
+	restyClient := resty.Client{}
+
+	session := InitializeSession(t)
+
+	err := session.authenticate()
+	require.NoError(t, err, "authentication failed")
+
+	err = session.AddAccessTokenToRequest(&restyClient)
+
+	assert.NoError(t, err, "failed to add token to response")
+	assert.Equal(t, session.token.AccessToken, restyClient.Token, "sets an token, that is not the AccessToken")
+}
+
+func Test_AddAccessTokenToResponse_MissingToken(t *testing.T) {
+	restyClient := resty.Client{}
+
+	session := InitializeSession(t)
+
+	err := session.AddAccessTokenToRequest(&restyClient)
+
+	assert.Error(t, err, "even with a missing token the authorization was set")
 }

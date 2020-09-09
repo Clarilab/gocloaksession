@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Nerzal/gocloak/v7"
+	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 )
 
@@ -66,6 +67,19 @@ func (session *goCloakSession) authenticate() error {
 	}
 
 	session.token = jwt
+
+	return nil
+}
+
+func (session *goCloakSession) AddAccessTokenToRequest(client *resty.Client) error {
+	if session.token == nil || session.token.AccessToken == "" {
+		return errors.New("The session does not contain an AccessToken")
+	}
+
+	if session.token.TokenType != "bearer" {
+		client.SetAuthScheme(session.token.TokenType)
+	}
+	client.SetAuthToken(session.token.AccessToken)
 
 	return nil
 }

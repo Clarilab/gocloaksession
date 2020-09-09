@@ -1,6 +1,6 @@
 # gocloak-session
 
-This client is uses: [gocloak](https://github.com/Nerzal/gocloak)
+This client is uses: [gocloak](https://github.com/Nerzal/gocloak) and [resty](https://github.com/go-resty/resty)
 
 ## Installation
 ```shell
@@ -18,9 +18,25 @@ import "github.com/clarilab/gocloak/v1"
 type GoCloakSession interface {
 	// GetKeycloakAuthToken returns a JWT object, containing the AccessToken and more
 	GetKeycloakAuthToken() (*gocloak.JWT, error)
+
+	// Sets the Authentication Header for the response
+	AddAccessTokenToRequest(*resty.Client) error
 }
+
 ```
 See https://github.com/Nerzal/gocloak/blob/master/token.go for complete JWT struct.
+
+# Example
+```go
+// Create a new session
+session := NewSession(clientId, clientSecret, realm, uri)
+
+// Authenticate or refresh the token
+token, err := session.GetKeycloakAuthToken()
+
+// Optionally, set the AuthToken for a resty.Client
+err = session.AddAccessTokenToRequest(&restyClient)
+```
 
 ## Developing & Testing
 For local testing you need to start a docker container. Simply run following commands prior to starting the tests:
