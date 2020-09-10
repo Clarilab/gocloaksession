@@ -43,6 +43,11 @@ session := NewSession(clientId, clientSecret, realm, uri)
 restyClient.OnBeforeRequest(session.AddAuthTokenToRequest)
 ```
 
+In case you need the GoCloak instance to execute your own commands.
+```go
+gocloakInstance := session.GetGoCloakInstance()
+```
+
 ## Developing & Testing
 For local testing you need to start a docker container. Simply run following commands prior to starting the tests:
 

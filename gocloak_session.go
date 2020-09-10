@@ -10,6 +10,9 @@ type GoCloakSession interface {
 	// GetKeycloakAuthToken returns a JWT object, containing the AccessToken and more
 	GetKeycloakAuthToken() (*gocloak.JWT, error)
 
-	// Sets the Authentication Header for the response
+	// AddAuthTokenToRequest sets the Authentication Header for the response
 	AddAuthTokenToRequest(*resty.Client, *resty.Request) error
+
+	// GetGoCloakInstance returns the currently used GoCloak instance.
+	GetGoCloakInstance() *gocloak.GoCloak
 }
