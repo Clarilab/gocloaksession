@@ -20,8 +20,11 @@ type GoCloakSession interface {
 	GetKeycloakAuthToken() (*gocloak.JWT, error)
 
 	// Sets the Authentication Header for the response
-  // Can be used as Middleware in resty
+	// Can be used as Middleware in resty
 	AddAuthTokenToRequest(*resty.Client, *resty.Request) error
+
+	// GetGoCloakInstance returns the currently used GoCloak instance.
+	GetGoCloakInstance() *gocloak.GoCloak
 }
 
 ```
