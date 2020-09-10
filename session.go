@@ -2,6 +2,7 @@ package gocloak_session
 
 import (
 	"context"
+	"time"
 
 	"github.com/Nerzal/gocloak/v7"
 	"github.com/go-resty/resty/v2"
@@ -14,6 +15,7 @@ type goCloakSession struct {
 	realm        string
 	gocloak      gocloak.GoCloak
 	token        *gocloak.JWT
+	lastRequest  time.Time
 }
 
 func NewSession(clientId, clientSecret, realm, uri string) GoCloakSession {
@@ -26,30 +28,61 @@ func NewSession(clientId, clientSecret, realm, uri string) GoCloakSession {
 }
 
 func (session *goCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
-	if session.token != nil {
-		token, _, err := session.gocloak.DecodeAccessToken(context.Background(), session.token.AccessToken, session.realm, "")
-		if err == nil && token.Valid {
+	if session.isAccessTokenValid() {
+		return session.token, nil
+	}
+
+	if session.isRefreshTokenValid() {
+		err := session.refreshToken()
+		if err == nil {
 			return session.token, nil
 		}
+	}
 
-		err = session.refreshToken()
-		if err != nil {
-			err = session.authenticate()
-			if err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		err := session.authenticate()
-		if err != nil {
-			return nil, err
-		}
+	err := session.authenticate()
+	if err != nil {
+		return nil, err
 	}
 
 	return session.token, nil
 }
 
+func (session *goCloakSession) isAccessTokenValid() bool {
+	if session.token == nil {
+		return false
+	}
+
+	if session.lastRequest.IsZero() {
+		return false
+	}
+
+	if int(time.Since(session.lastRequest).Seconds()) > session.token.ExpiresIn {
+		return false
+	}
+
+	token, _, err := session.gocloak.DecodeAccessToken(context.Background(), session.token.AccessToken, session.realm, "")
+	return err == nil && token.Valid
+}
+
+func (session *goCloakSession) isRefreshTokenValid() bool {
+	if session.token == nil {
+		return false
+	}
+
+	if session.lastRequest.IsZero() {
+		return false
+	}
+
+	if int(time.Since(session.lastRequest).Seconds()) > session.token.RefreshExpiresIn {
+		return false
+	}
+
+	return true
+}
+
 func (session *goCloakSession) refreshToken() error {
+	session.lastRequest = time.Now()
+
 	jwt, err := session.gocloak.RefreshToken(context.Background(), session.token.RefreshToken, session.clientID, session.clientSecret, session.realm)
 	if err != nil {
 		return errors.Wrap(err, "could not refresh keycloak-token")
@@ -61,6 +94,8 @@ func (session *goCloakSession) refreshToken() error {
 }
 
 func (session *goCloakSession) authenticate() error {
+	session.lastRequest = time.Now()
+
 	jwt, err := session.gocloak.LoginClient(context.Background(), session.clientID, session.clientSecret, session.realm)
 	if err != nil {
 		return errors.Wrap(err, "could not login to keycloak")
