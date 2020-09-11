@@ -1,4 +1,4 @@
-module github.com/Clarilab/gocloak-session
+module github.com/Clarilab/gocloaksession
 
 go 1.15
 

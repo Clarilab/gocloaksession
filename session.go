@@ -1,4 +1,4 @@
-package gocloak_session
+package gocloaksession
 
 import (
 	"context"

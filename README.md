@@ -1,15 +1,15 @@
-# gocloak-session
+# gocloaksession
 
 This client is uses: [gocloak](https://github.com/Nerzal/gocloak) and [resty](https://github.com/go-resty/resty)
 
 ## Installation
 ```shell
-go get github.com/Clarilab/gocloak-session
+go get github.com/Clarilab/gocloaksession
 ```
 
 ## Importing
 ```go
-import "github.com/Clarilab/gocloak-session"
+import "github.com/Clarilab/gocloaksession"
 ```
 
 ## Features
