@@ -14,12 +14,18 @@ const (
 	gocloakClientSecret = "gocloak-secret"
 )
 
-func InitializeSession(t testing.TB) *goCloakSession {
-	return NewSession(gocloakClientID, gocloakClientSecret, gocloakRealm, gocloakHostname).(*goCloakSession)
+func initializeSession(t testing.TB) *goCloakSession {
+	session, err := NewSession(gocloakClientID, gocloakClientSecret, gocloakRealm, gocloakHostname)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
+	return session.(*goCloakSession)
 }
 
 func Test_GetKeycloakAuthToken_Authentication(t *testing.T) {
-	session := InitializeSession(t)
+	session := initializeSession(t)
 
 	token, err := session.GetKeycloakAuthToken()
 
@@ -28,7 +34,7 @@ func Test_GetKeycloakAuthToken_Authentication(t *testing.T) {
 }
 
 func Test_GetKeycloakAuthToken_StillValid(t *testing.T) {
-	session := InitializeSession(t)
+	session := initializeSession(t)
 
 	_ = session.authenticate()
 
@@ -45,7 +51,7 @@ func Test_GetKeycloakAuthToken_StillValid(t *testing.T) {
 }
 
 func Test_GetKeycloakAuthToken_Refresh(t *testing.T) {
-	session := InitializeSession(t)
+	session := initializeSession(t)
 
 	_ = session.authenticate()
 
@@ -63,7 +69,7 @@ func Test_GetKeycloakAuthToken_Refresh(t *testing.T) {
 }
 
 func Test_refreshToken(t *testing.T) {
-	session := InitializeSession(t)
+	session := initializeSession(t)
 
 	_ = session.authenticate()
 
@@ -79,7 +85,7 @@ func Test_refreshToken(t *testing.T) {
 }
 
 func Test_authenticate(t *testing.T) {
-	session := InitializeSession(t)
+	session := initializeSession(t)
 
 	err := session.authenticate()
 

@@ -2,6 +2,7 @@ package gocloaksession
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/Nerzal/gocloak/v7"
@@ -9,22 +10,56 @@ import (
 	"github.com/pkg/errors"
 )
 
-type goCloakSession struct {
-	clientID     string
-	clientSecret string
-	realm        string
-	gocloak      gocloak.GoCloak
-	token        *gocloak.JWT
-	lastRequest  time.Time
+// CallOption configures a Session
+type CallOption func(*goCloakSession) error
+
+// RequestSkipper is a function signature that can be used to skip a certain
+// request if needed.
+type RequestSkipper func(*resty.Request) bool
+
+// SubstringRequestSkipper is a RequestSkipper that skips a request when the
+// url in the request contains a certain substring
+func SubstringRequestSkipper(substr string) RequestSkipper {
+	return func(r *resty.Request) bool {
+		return strings.Contains(r.URL, substr)
+	}
 }
 
-func NewSession(clientId, clientSecret, realm, uri string) GoCloakSession {
-	return &goCloakSession{
-		clientID:     clientId,
+// RequestSkipperCallOption appends a RequestSkipper to the skipConditions
+func RequestSkipperCallOption(requestSkipper RequestSkipper) CallOption {
+	return func(gcs *goCloakSession) error {
+		gcs.skipConditions = append(gcs.skipConditions, requestSkipper)
+		return nil
+	}
+}
+
+type goCloakSession struct {
+	clientID       string
+	clientSecret   string
+	realm          string
+	gocloak        gocloak.GoCloak
+	token          *gocloak.JWT
+	lastRequest    time.Time
+	skipConditions []RequestSkipper
+}
+
+// NewSession returns a new instance of a gocloak Session
+func NewSession(clientID, clientSecret, realm, uri string, calloptions ...CallOption) (GoCloakSession, error) {
+	session := &goCloakSession{
+		clientID:     clientID,
 		clientSecret: clientSecret,
 		realm:        realm,
 		gocloak:      gocloak.NewClient(uri),
 	}
+
+	for _, option := range calloptions {
+		err := option(session)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while applying option")
+		}
+	}
+
+	return session, nil
 }
 
 func (session *goCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
@@ -107,6 +142,12 @@ func (session *goCloakSession) authenticate() error {
 }
 
 func (session *goCloakSession) AddAuthTokenToRequest(client *resty.Client, request *resty.Request) error {
+	for _, shouldSkip := range session.skipConditions {
+		if shouldSkip(request) {
+			return nil
+		}
+	}
+
 	token, err := session.GetKeycloakAuthToken()
 	if err != nil {
 		return err
