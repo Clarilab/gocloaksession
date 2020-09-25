@@ -62,6 +62,10 @@ func NewSession(clientID, clientSecret, realm, uri string, calloptions ...CallOp
 	return session, nil
 }
 
+func (session *goCloakSession) ForceRefresh() error {
+	return session.refreshToken()
+}
+
 func (session *goCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
 	if session.isAccessTokenValid() {
 		return session.token, nil
