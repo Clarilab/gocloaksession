@@ -15,4 +15,7 @@ type GoCloakSession interface {
 
 	// GetGoCloakInstance returns the currently used GoCloak instance.
 	GetGoCloakInstance() *gocloak.GoCloak
+
+	// ForceRefresh returns the currently used GoCloak instance.
+	ForceRefresh() error
 }
