@@ -62,6 +62,10 @@ func NewSession(clientID, clientSecret, realm, uri string, calloptions ...CallOp
 	return session, nil
 }
 
+func (session *goCloakSession) ForceAuthenticate() error {
+	return session.authenticate()
+}
+
 func (session *goCloakSession) ForceRefresh() error {
 	return session.refreshToken()
 }

@@ -25,6 +25,12 @@ type GoCloakSession interface {
 
 	// GetGoCloakInstance returns the currently used GoCloak instance.
 	GetGoCloakInstance() *gocloak.GoCloak
+
+	// ForceAuthenticate ignores all checks and executes an authentication.
+	ForceAuthenticate() error
+
+	// ForceRefresh ignores all checks and executes a refresh.
+	ForceRefresh() error
 }
 
 ```
