@@ -33,23 +33,37 @@ func RequestSkipperCallOption(requestSkipper RequestSkipper) CallOption {
 	}
 }
 
+// PrematureRefreshThresholdOption sets the threshold for a premature token
+// refresh
+func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) CallOption {
+	return func(gcs *goCloakSession) error {
+		gcs.prematureRefreshTokenRefreshThreshold = int(refreshToken.Seconds())
+		gcs.prematureAccessTokenRefreshThreshold = int(accessToken.Seconds())
+		return nil
+	}
+}
+
 type goCloakSession struct {
-	clientID       string
-	clientSecret   string
-	realm          string
-	gocloak        gocloak.GoCloak
-	token          *gocloak.JWT
-	lastRequest    time.Time
-	skipConditions []RequestSkipper
+	clientID                              string
+	clientSecret                          string
+	realm                                 string
+	gocloak                               gocloak.GoCloak
+	token                                 *gocloak.JWT
+	lastRequest                           time.Time
+	skipConditions                        []RequestSkipper
+	prematureRefreshTokenRefreshThreshold int
+	prematureAccessTokenRefreshThreshold  int
 }
 
 // NewSession returns a new instance of a gocloak Session
 func NewSession(clientID, clientSecret, realm, uri string, calloptions ...CallOption) (GoCloakSession, error) {
 	session := &goCloakSession{
-		clientID:     clientID,
-		clientSecret: clientSecret,
-		realm:        realm,
-		gocloak:      gocloak.NewClient(uri),
+		clientID:                              clientID,
+		clientSecret:                          clientSecret,
+		realm:                                 realm,
+		gocloak:                               gocloak.NewClient(uri),
+		prematureAccessTokenRefreshThreshold:  0,
+		prematureRefreshTokenRefreshThreshold: 0,
 	}
 
 	for _, option := range calloptions {
@@ -99,7 +113,8 @@ func (session *goCloakSession) isAccessTokenValid() bool {
 		return false
 	}
 
-	if int(time.Since(session.lastRequest).Seconds()) > session.token.ExpiresIn {
+	sessionExpiry := session.token.ExpiresIn - session.prematureAccessTokenRefreshThreshold
+	if int(time.Since(session.lastRequest).Seconds()) > sessionExpiry {
 		return false
 	}
 
@@ -116,7 +131,8 @@ func (session *goCloakSession) isRefreshTokenValid() bool {
 		return false
 	}
 
-	if int(time.Since(session.lastRequest).Seconds()) > session.token.RefreshExpiresIn {
+	sessionExpiry := session.token.RefreshExpiresIn - session.prematureRefreshTokenRefreshThreshold
+	if int(time.Since(session.lastRequest).Seconds()) > sessionExpiry {
 		return false
 	}
 
