@@ -1,6 +1,6 @@
 # gocloaksession
 
-This client is uses: [gocloak](https://github.com/Nerzal/gocloak) and [resty](https://github.com/go-resty/resty)
+This client uses: [gocloak](https://github.com/Nerzal/gocloak) and [resty](https://github.com/go-resty/resty)
 
 ## Installation
 ```shell
@@ -24,7 +24,7 @@ type GoCloakSession interface {
 	AddAuthTokenToRequest(*resty.Client, *resty.Request) error
 
 	// GetGoCloakInstance returns the currently used GoCloak instance.
-	GetGoCloakInstance() *gocloak.GoCloak
+	GetGoCloakInstance() gocloak.GoCloak
 
 	// ForceAuthenticate ignores all checks and executes an authentication.
 	ForceAuthenticate() error
@@ -36,7 +36,7 @@ type GoCloakSession interface {
 ```
 See https://github.com/Nerzal/gocloak/blob/master/token.go for complete JWT struct.
 
-# Example
+## Example
 ```go
 // Create a new session
 session := NewSession(clientId, clientSecret, realm, uri)
