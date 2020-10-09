@@ -169,6 +169,6 @@ func (session *goCloakSession) AddAuthTokenToRequest(client *resty.Client, reque
 	return nil
 }
 
-func (session *goCloakSession) GetGoCloakInstance() *gocloak.GoCloak {
-	return &session.gocloak
+func (session *goCloakSession) GetGoCloakInstance() gocloak.GoCloak {
+	return session.gocloak
 }
