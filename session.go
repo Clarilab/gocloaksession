@@ -177,10 +177,15 @@ func (session *goCloakSession) AddAuthTokenToRequest(client *resty.Client, reque
 		return err
 	}
 
-	if token.TokenType != "bearer" {
-		request.SetAuthScheme(token.TokenType)
+	var tokenType string
+	switch token.TokenType {
+	case "bearer":
+		tokenType = "Bearer"
+	default:
+		tokenType = token.TokenType
 	}
-	request.SetAuthToken(token.AccessToken)
+
+	request.Header.Set("Authorization", tokenType+" "+token.AccessToken)
 
 	return nil
 }
