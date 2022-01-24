@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nerzal/gocloak/v9"
+	"github.com/Nerzal/gocloak/v10"
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 )
@@ -118,7 +118,7 @@ func (session *goCloakSession) isAccessTokenValid() bool {
 		return false
 	}
 
-	token, _, err := session.gocloak.DecodeAccessToken(context.Background(), session.token.AccessToken, session.realm, "")
+	token, _, err := session.gocloak.DecodeAccessToken(context.Background(), session.token.AccessToken, session.realm)
 	return err == nil && token.Valid
 }
 
