@@ -1,5 +1,5 @@
-github.com/Nerzal/gocloak/v10 v10.0.1 h1:W9pyD4I6w57ceNmjJoS4mXezBAxpupj11ytxper2KA8=
-github.com/Nerzal/gocloak/v10 v10.0.1/go.mod h1:18jh1lwSHEJeSvmdH+08JyJU/XjPdNYLWEZ7paDB2k8=
+github.com/Nerzal/gocloak/v11 v11.0.0 h1:GAS2XEBq6bGY/LX1rx4e+3tIohXqLSi/veoRpFb3bmo=
+github.com/Nerzal/gocloak/v11 v11.0.0/go.mod h1:sxvvWpGVsEuxHVoM3D3vQBSqC1qgmWJwRHwlsJwyeiw=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-resty/resty/v2 v2.6.0 h1:joIR5PNLM2EFqqESUjCMGXrWmXNHEU9CEiK813oKYS4=
