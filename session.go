@@ -43,6 +43,13 @@ func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) Ca
 	}
 }
 
+func SetGocloak(gc gocloak.GoCloak) CallOption {
+	return func(gcs *goCloakSession) error {
+		gcs.gocloak = gc
+		return nil
+	}
+}
+
 type goCloakSession struct {
 	clientID                              string
 	clientSecret                          string
