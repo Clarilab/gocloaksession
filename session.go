@@ -56,7 +56,7 @@ type goCloakSession struct {
 	realm                                 string
 	gocloak                               gocloak.GoCloak
 	token                                 *gocloak.JWT
-	lastRequest                           time.Time
+	lastRequest                           *time.Time
 	skipConditions                        []RequestSkipper
 	prematureRefreshTokenRefreshThreshold int
 	prematureAccessTokenRefreshThreshold  int
@@ -121,7 +121,7 @@ func (session *goCloakSession) isAccessTokenValid() bool {
 	}
 
 	sessionExpiry := session.token.ExpiresIn - session.prematureAccessTokenRefreshThreshold
-	if int(time.Since(session.lastRequest).Seconds()) > sessionExpiry {
+	if int(time.Since(*session.lastRequest).Seconds()) > sessionExpiry {
 		return false
 	}
 
@@ -139,7 +139,7 @@ func (session *goCloakSession) isRefreshTokenValid() bool {
 	}
 
 	sessionExpiry := session.token.RefreshExpiresIn - session.prematureRefreshTokenRefreshThreshold
-	if int(time.Since(session.lastRequest).Seconds()) > sessionExpiry {
+	if int(time.Since(*session.lastRequest).Seconds()) > sessionExpiry {
 		return false
 	}
 
@@ -147,7 +147,8 @@ func (session *goCloakSession) isRefreshTokenValid() bool {
 }
 
 func (session *goCloakSession) refreshToken() error {
-	session.lastRequest = time.Now()
+	now := time.Now()
+	session.lastRequest = &now
 
 	jwt, err := session.gocloak.RefreshToken(context.Background(), session.token.RefreshToken, session.clientID, session.clientSecret, session.realm)
 	if err != nil {
@@ -160,7 +161,8 @@ func (session *goCloakSession) refreshToken() error {
 }
 
 func (session *goCloakSession) authenticate() error {
-	session.lastRequest = time.Now()
+	now := time.Now()
+	session.lastRequest = &now
 
 	jwt, err := session.gocloak.LoginClient(context.Background(), session.clientID, session.clientSecret, session.realm)
 	if err != nil {
