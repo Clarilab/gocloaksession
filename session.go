@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nerzal/gocloak/v11"
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 )
@@ -43,7 +43,7 @@ func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) Ca
 	}
 }
 
-func SetGocloak(gc gocloak.GoCloak) CallOption {
+func SetGocloak(gc *gocloak.GoCloak) CallOption {
 	return func(gcs *goCloakSession) error {
 		gcs.gocloak = gc
 		return nil
@@ -54,7 +54,7 @@ type goCloakSession struct {
 	clientID                              string
 	clientSecret                          string
 	realm                                 string
-	gocloak                               gocloak.GoCloak
+	gocloak                               *gocloak.GoCloak
 	token                                 *gocloak.JWT
 	lastRequest                           *time.Time
 	skipConditions                        []RequestSkipper
@@ -199,6 +199,6 @@ func (session *goCloakSession) AddAuthTokenToRequest(client *resty.Client, reque
 	return nil
 }
 
-func (session *goCloakSession) GetGoCloakInstance() gocloak.GoCloak {
+func (session *goCloakSession) GetGoCloakInstance() *gocloak.GoCloak {
 	return session.gocloak
 }

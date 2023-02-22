@@ -1,7 +1,7 @@
 package gocloaksession
 
 import (
-	"github.com/Nerzal/gocloak/v11"
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -14,7 +14,7 @@ type GoCloakSession interface {
 	AddAuthTokenToRequest(*resty.Client, *resty.Request) error
 
 	// GetGoCloakInstance returns the currently used GoCloak instance.
-	GetGoCloakInstance() gocloak.GoCloak
+	GetGoCloakInstance() *gocloak.GoCloak
 
 	// ForceAuthenticate ignores all checks and executes an authentication.
 	ForceAuthenticate() error
