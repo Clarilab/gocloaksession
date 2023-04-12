@@ -61,15 +61,14 @@ gocloakInstance := session.GetGoCloakInstance()
 For local testing you need to start a docker container. Simply run following commands prior to starting the tests:
 
 ```shell
-docker pull quay.io/keycloak/keycloak
+docker pull quay.io/keycloak/keycloak:latest
 docker run -d \
-	-e KEYCLOAK_USER=admin \
-	-e KEYCLOAK_PASSWORD=secret \
-	-e KEYCLOAK_IMPORT=/tmp/gocloak-realm.json \
-	-v "`pwd`/testdata/gocloak-realm.json:/tmp/gocloak-realm.json" \
-	-p 8080:8080 \
-	--name gocloak-test \
-	quay.io/keycloak/keycloak:latest -Dkeycloak.profile.feature.upload_scripts=enabled
+    -e KEYCLOAK_ADMIN=admin \
+    -e KEYCLOAK_ADMIN_PASSWORD=secret \
+    -v "$(pwd)/testdata:/opt/keycloak/data/import" \
+    -p 8080:8080 \
+    --name gocloak-test \
+    quay.io/keycloak/keycloak:latest start-dev --import-realm
 
 go test
 ```
