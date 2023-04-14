@@ -43,6 +43,7 @@ func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) Ca
 	}
 }
 
+// SetGocloak sets the goCloak instance
 func SetGocloak(gc *gocloak.GoCloak) CallOption {
 	return func(gcs *goCloakSession) error {
 		gcs.gocloak = gc
@@ -53,6 +54,8 @@ func SetGocloak(gc *gocloak.GoCloak) CallOption {
 type goCloakSession struct {
 	clientID                              string
 	clientSecret                          string
+	username                              string
+	password                              string
 	realm                                 string
 	gocloak                               *gocloak.GoCloak
 	token                                 *gocloak.JWT
@@ -67,6 +70,29 @@ func NewSession(clientID, clientSecret, realm, uri string, calloptions ...CallOp
 	session := &goCloakSession{
 		clientID:                              clientID,
 		clientSecret:                          clientSecret,
+		realm:                                 realm,
+		gocloak:                               gocloak.NewClient(uri),
+		prematureAccessTokenRefreshThreshold:  0,
+		prematureRefreshTokenRefreshThreshold: 0,
+	}
+
+	for _, option := range calloptions {
+		err := option(session)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while applying option")
+		}
+	}
+
+	return session, nil
+}
+
+// NewSession returns a new instance of a gocloak Session with admin access
+func NewAdminSession(username, password, realm, uri string, calloptions ...CallOption) (GoCloakSession, error) {
+	session := &goCloakSession{
+		clientID:                              "admin-cli",
+		clientSecret:                          "",
+		username:                              username,
+		password:                              password,
 		realm:                                 realm,
 		gocloak:                               gocloak.NewClient(uri),
 		prematureAccessTokenRefreshThreshold:  0,
@@ -156,6 +182,7 @@ func (session *goCloakSession) refreshToken() error {
 	}
 
 	session.token = jwt
+	// }
 
 	return nil
 }
@@ -164,12 +191,26 @@ func (session *goCloakSession) authenticate() error {
 	now := time.Now()
 	session.lastRequest = &now
 
-	jwt, err := session.gocloak.LoginClient(context.Background(), session.clientID, session.clientSecret, session.realm)
-	if err != nil {
-		return errors.Wrap(err, "could not login to keycloak")
+	if session.clientID == "admin-cli" {
+		jwt, err := session.gocloak.Login(
+			context.Background(),
+			session.clientID,
+			session.clientSecret,
+			session.realm,
+			session.username,
+			session.password,
+		)
+		if err != nil {
+			return errors.Wrap(err, "could not login to keycloak")
+		}
+		session.token = jwt
+	} else {
+		jwt, err := session.gocloak.LoginClient(context.Background(), session.clientID, session.clientSecret, session.realm)
+		if err != nil {
+			return errors.Wrap(err, "could not login to keycloak")
+		}
+		session.token = jwt
 	}
-
-	session.token = jwt
 
 	return nil
 }
