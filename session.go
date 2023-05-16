@@ -43,6 +43,14 @@ func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) Ca
 	}
 }
 
+// WithWildFlySupport initializes gocloak client with legacy wildfly support.
+func WithWildFlySupport(uri string) CallOption {
+	return func(gcs *goCloakSession) error {
+		gcs.gocloak = gocloak.NewClient(uri, gocloak.SetLegacyWildFlySupport())
+		return nil
+	}
+}
+
 func SetGocloak(gc *gocloak.GoCloak) CallOption {
 	return func(gcs *goCloakSession) error {
 		gcs.gocloak = gc
