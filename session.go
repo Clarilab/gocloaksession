@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CallOption configures a Session
-type CallOption func(*goCloakSession) error
+// FunctionalOption configures a Session
+type FunctionalOption func(*goCloakSession) error
 
 // RequestSkipper is a function signature that can be used to skip a certain
 // request if needed.
@@ -19,14 +19,14 @@ type RequestSkipper func(*resty.Request) bool
 
 // SubstringRequestSkipper is a RequestSkipper that skips a request when the
 // url in the request contains a certain substring
-func SubstringRequestSkipper(substr string) RequestSkipper {
+func SubstringRequestSkipper(subStr string) RequestSkipper {
 	return func(r *resty.Request) bool {
-		return strings.Contains(r.URL, substr)
+		return strings.Contains(r.URL, subStr)
 	}
 }
 
 // RequestSkipperCallOption appends a RequestSkipper to the skipConditions
-func RequestSkipperCallOption(requestSkipper RequestSkipper) CallOption {
+func RequestSkipperCallOption(requestSkipper RequestSkipper) FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.skipConditions = append(gcs.skipConditions, requestSkipper)
 		return nil
@@ -35,7 +35,7 @@ func RequestSkipperCallOption(requestSkipper RequestSkipper) CallOption {
 
 // PrematureRefreshThresholdOption sets the threshold for a premature token
 // refresh
-func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) CallOption {
+func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.prematureRefreshTokenRefreshThreshold = int(refreshToken.Seconds())
 		gcs.prematureAccessTokenRefreshThreshold = int(accessToken.Seconds())
@@ -44,16 +44,25 @@ func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) Ca
 }
 
 // WithWildFlySupport initializes gocloak client with legacy wildfly support.
-func WithWildFlySupport(uri string) CallOption {
+func WithWildFlySupport(uri string) FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.gocloak = gocloak.NewClient(uri, gocloak.SetLegacyWildFlySupport())
 		return nil
 	}
 }
 
-func SetGocloak(gc *gocloak.GoCloak) CallOption {
+// SetGocloak manually set a goCloak client.
+func SetGocloak(gc *gocloak.GoCloak) FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.gocloak = gc
+		return nil
+	}
+}
+
+// SetSkipRefreshToken configures gocloakSession to skip refresh tokens.
+func SetSkipRefreshToken() FunctionalOption {
+	return func(gcs *goCloakSession) error {
+		gcs.skipRefresh = true
 		return nil
 	}
 }
@@ -68,10 +77,11 @@ type goCloakSession struct {
 	skipConditions                        []RequestSkipper
 	prematureRefreshTokenRefreshThreshold int
 	prematureAccessTokenRefreshThreshold  int
+	skipRefresh                           bool
 }
 
 // NewSession returns a new instance of a gocloak Session
-func NewSession(clientID, clientSecret, realm, uri string, calloptions ...CallOption) (GoCloakSession, error) {
+func NewSession(clientID, clientSecret, realm, uri string, option ...FunctionalOption) (GoCloakSession, error) {
 	session := &goCloakSession{
 		clientID:                              clientID,
 		clientSecret:                          clientSecret,
@@ -81,7 +91,7 @@ func NewSession(clientID, clientSecret, realm, uri string, calloptions ...CallOp
 		prematureRefreshTokenRefreshThreshold: 0,
 	}
 
-	for _, option := range calloptions {
+	for _, option := range option {
 		err := option(session)
 		if err != nil {
 			return nil, errors.Wrap(err, "error while applying option")
@@ -104,7 +114,7 @@ func (session *goCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
 		return session.token, nil
 	}
 
-	if session.isRefreshTokenValid() {
+	if !session.skipRefresh && session.isRefreshTokenValid() {
 		err := session.refreshToken()
 		if err == nil {
 			return session.token, nil
