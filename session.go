@@ -67,6 +67,14 @@ func SetSkipRefreshToken() FunctionalOption {
 	}
 }
 
+// WithScopes sets the scopes to use when making requests.
+func WithScopes(scopes ...string) FunctionalOption {
+	return func(gcs *goCloakSession) error {
+		gcs.scopes = scopes
+		return nil
+	}
+}
+
 type goCloakSession struct {
 	clientID                              string
 	clientSecret                          string
@@ -78,6 +86,7 @@ type goCloakSession struct {
 	prematureRefreshTokenRefreshThreshold int
 	prematureAccessTokenRefreshThreshold  int
 	skipRefresh                           bool
+	scopes                                []string
 }
 
 // NewSession returns a new instance of a gocloak Session
@@ -101,105 +110,105 @@ func NewSession(clientID, clientSecret, realm, uri string, option ...FunctionalO
 	return session, nil
 }
 
-func (session *goCloakSession) ForceAuthenticate() error {
-	return session.authenticate()
+func (s *goCloakSession) ForceAuthenticate() error {
+	return s.authenticate()
 }
 
-func (session *goCloakSession) ForceRefresh() error {
-	return session.refreshToken()
+func (s *goCloakSession) ForceRefresh() error {
+	return s.refreshToken()
 }
 
-func (session *goCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
-	if session.isAccessTokenValid() {
-		return session.token, nil
+func (s *goCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
+	if s.isAccessTokenValid() {
+		return s.token, nil
 	}
 
-	if !session.skipRefresh && session.isRefreshTokenValid() {
-		err := session.refreshToken()
+	if !s.skipRefresh && s.isRefreshTokenValid() {
+		err := s.refreshToken()
 		if err == nil {
-			return session.token, nil
+			return s.token, nil
 		}
 	}
 
-	err := session.authenticate()
+	err := s.authenticate()
 	if err != nil {
 		return nil, err
 	}
 
-	return session.token, nil
+	return s.token, nil
 }
 
-func (session *goCloakSession) isAccessTokenValid() bool {
-	if session.token == nil {
+func (s *goCloakSession) isAccessTokenValid() bool {
+	if s.token == nil {
 		return false
 	}
 
-	if session.lastRequest.IsZero() {
+	if s.lastRequest.IsZero() {
 		return false
 	}
 
-	sessionExpiry := session.token.ExpiresIn - session.prematureAccessTokenRefreshThreshold
-	if int(time.Since(*session.lastRequest).Seconds()) > sessionExpiry {
+	sessionExpiry := s.token.ExpiresIn - s.prematureAccessTokenRefreshThreshold
+	if int(time.Since(*s.lastRequest).Seconds()) > sessionExpiry {
 		return false
 	}
 
-	token, _, err := session.gocloak.DecodeAccessToken(context.Background(), session.token.AccessToken, session.realm)
+	token, _, err := s.gocloak.DecodeAccessToken(context.Background(), s.token.AccessToken, s.realm)
 	return err == nil && token.Valid
 }
 
-func (session *goCloakSession) isRefreshTokenValid() bool {
-	if session.token == nil {
+func (s *goCloakSession) isRefreshTokenValid() bool {
+	if s.token == nil {
 		return false
 	}
 
-	if session.lastRequest.IsZero() {
+	if s.lastRequest.IsZero() {
 		return false
 	}
 
-	sessionExpiry := session.token.RefreshExpiresIn - session.prematureRefreshTokenRefreshThreshold
-	if int(time.Since(*session.lastRequest).Seconds()) > sessionExpiry {
+	sessionExpiry := s.token.RefreshExpiresIn - s.prematureRefreshTokenRefreshThreshold
+	if int(time.Since(*s.lastRequest).Seconds()) > sessionExpiry {
 		return false
 	}
 
 	return true
 }
 
-func (session *goCloakSession) refreshToken() error {
+func (s *goCloakSession) refreshToken() error {
 	now := time.Now()
-	session.lastRequest = &now
+	s.lastRequest = &now
 
-	jwt, err := session.gocloak.RefreshToken(context.Background(), session.token.RefreshToken, session.clientID, session.clientSecret, session.realm)
+	jwt, err := s.gocloak.RefreshToken(context.Background(), s.token.RefreshToken, s.clientID, s.clientSecret, s.realm)
 	if err != nil {
 		return errors.Wrap(err, "could not refresh keycloak-token")
 	}
 
-	session.token = jwt
+	s.token = jwt
 
 	return nil
 }
 
-func (session *goCloakSession) authenticate() error {
+func (s *goCloakSession) authenticate() error {
 	now := time.Now()
-	session.lastRequest = &now
+	s.lastRequest = &now
 
-	jwt, err := session.gocloak.LoginClient(context.Background(), session.clientID, session.clientSecret, session.realm)
+	jwt, err := s.gocloak.LoginClient(context.Background(), s.clientID, s.clientSecret, s.realm, s.scopes...)
 	if err != nil {
 		return errors.Wrap(err, "could not login to keycloak")
 	}
 
-	session.token = jwt
+	s.token = jwt
 
 	return nil
 }
 
-func (session *goCloakSession) AddAuthTokenToRequest(client *resty.Client, request *resty.Request) error {
-	for _, shouldSkip := range session.skipConditions {
+func (s *goCloakSession) AddAuthTokenToRequest(client *resty.Client, request *resty.Request) error {
+	for _, shouldSkip := range s.skipConditions {
 		if shouldSkip(request) {
 			return nil
 		}
 	}
 
-	token, err := session.GetKeycloakAuthToken()
+	token, err := s.GetKeycloakAuthToken()
 	if err != nil {
 		return err
 	}
@@ -217,6 +226,6 @@ func (session *goCloakSession) AddAuthTokenToRequest(client *resty.Client, reque
 	return nil
 }
 
-func (session *goCloakSession) GetGoCloakInstance() *gocloak.GoCloak {
-	return session.gocloak
+func (s *goCloakSession) GetGoCloakInstance() *gocloak.GoCloak {
+	return s.gocloak
 }
