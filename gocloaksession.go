@@ -1,6 +1,8 @@
 package gocloaksession
 
 import (
+	"context"
+
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/go-resty/resty/v2"
 )
@@ -12,6 +14,9 @@ type GoCloakSession interface {
 
 	// AddAuthTokenToRequest sets the Authentication Header for the response
 	AddAuthTokenToRequest(*resty.Client, *resty.Request) error
+
+	// AddAuthTokenToGRPCContext sets the Authentication Header for the context
+	AddAuthTokenToGRPCContext(ctx context.Context) (context.Context, error)
 
 	// GetGoCloakInstance returns the currently used GoCloak instance.
 	GetGoCloakInstance() *gocloak.GoCloak
