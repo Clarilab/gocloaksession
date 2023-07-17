@@ -1,10 +1,12 @@
 package gocloaksession
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/metadata"
 )
 
 const (
@@ -91,4 +93,24 @@ func Test_authenticate(t *testing.T) {
 
 	assert.NoError(t, err, "authenticate failed")
 	assert.NotZero(t, session.token.AccessToken, "Token is not set")
+}
+
+func Test_AddAuthTokenToGRPCContext(t *testing.T) {
+	session := initializeSession(t)
+
+	_ = session.authenticate()
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	ctx, err := session.AddAuthTokenToGRPCContext(ctx)
+
+	assert.NoError(t, err, "addAuthTokenToGRPCContext failed")
+
+	auth, ok := metadata.FromOutgoingContext(ctx)
+
+	assert.True(t, ok, "FromOutgoingContext failed")
+	assert.Contains(t, auth, "authorization", "authorization was not found")
+	assert.Contains(t, auth["authorization"][0], "Bearer ", "authorization is not set")
 }

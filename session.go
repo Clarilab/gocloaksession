@@ -8,6 +8,7 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/metadata"
 )
 
 // FunctionalOption configures a Session
@@ -224,6 +225,23 @@ func (s *goCloakSession) AddAuthTokenToRequest(client *resty.Client, request *re
 	request.Header.Set("Authorization", tokenType+" "+token.AccessToken)
 
 	return nil
+}
+
+func (session *goCloakSession) AddAuthTokenToGRPCContext(ctx context.Context) (context.Context, error) {
+	token, err := session.GetKeycloakAuthToken()
+	if err != nil {
+		return nil, err
+	}
+
+	var tokenType string
+	switch token.TokenType {
+	case "bearer":
+		tokenType = "Bearer"
+	default:
+		tokenType = token.TokenType
+	}
+
+	return metadata.AppendToOutgoingContext(ctx, "authorization", tokenType+" "+token.AccessToken), nil
 }
 
 func (s *goCloakSession) GetGoCloakInstance() *gocloak.GoCloak {
