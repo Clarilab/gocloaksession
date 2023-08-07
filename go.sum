@@ -1,5 +1,5 @@
-github.com/Nerzal/gocloak/v13 v13.7.0 h1:rWZdXtGJarcdTp/XC+cHgAMhLUUYSugm4qnb/qHPyKw=
-github.com/Nerzal/gocloak/v13 v13.7.0/go.mod h1:rRBtEdh5N0+JlZZEsrfZcB2sRMZWbgSxI2EIv9jpJp4=
+github.com/Nerzal/gocloak/v13 v13.8.0 h1:7s9cK8X3vy8OIic+pG4POE9vGy02tSHkMhvWXv0P2m8=
+github.com/Nerzal/gocloak/v13 v13.8.0/go.mod h1:rRBtEdh5N0+JlZZEsrfZcB2sRMZWbgSxI2EIv9jpJp4=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
