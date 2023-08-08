@@ -15,12 +15,6 @@ while true; do
 done
 echo "Service is now available at ${keycloakServer}"
 
-ARGS=()
-if [ $# -gt 0 ]; then
-    ARGS+=("-run")
-    ARGS+=("^($@)$")
-fi
-
 go test -failfast -race -cover -v -run Integration -coverprofile=coverage.out -covermode=atomic
 
 docker-compose down
