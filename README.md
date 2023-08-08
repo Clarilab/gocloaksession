@@ -3,16 +3,19 @@
 This client uses: [gocloak](https://github.com/Nerzal/gocloak) and [resty](https://github.com/go-resty/resty)
 
 ## Installation
+
 ```shell
 go get github.com/Clarilab/gocloaksession
 ```
 
 ## Importing
+
 ```go
 import "github.com/Clarilab/gocloaksession"
 ```
 
 ## Features
+
 ```go
 // GoCloakSession holds all callable methods
 type GoCloakSession interface {
@@ -34,9 +37,11 @@ type GoCloakSession interface {
 }
 
 ```
-See https://github.com/Nerzal/gocloak/blob/master/token.go for complete JWT struct.
 
-## Example
+See https://github.com/Nerzal/gocloak/blob/main/token.go for complete JWT struct.
+
+## Examples
+
 ```go
 // Create a new session
 session := NewSession(clientId, clientSecret, realm, uri)
@@ -46,6 +51,7 @@ token, err := session.GetKeycloakAuthToken()
 ```
 
 If you want to use it as middleware in resty, you can use the following example
+
 ```go
 session := NewSession(clientId, clientSecret, realm, uri)
 
@@ -53,29 +59,27 @@ restyClient.OnBeforeRequest(session.AddAuthTokenToRequest)
 ```
 
 In case you need the GoCloak instance to execute your own commands.
+
 ```go
 gocloakInstance := session.GetGoCloakInstance()
 ```
 
 ## Developing & Testing
-For local testing you need to start a docker container. Simply run following commands prior to starting the tests:
+
+For local development you need to start a docker container:
 
 ```shell
-docker pull quay.io/keycloak/keycloak:latest
-docker run -d \
-    -e KEYCLOAK_ADMIN=admin \
-    -e KEYCLOAK_ADMIN_PASSWORD=secret \
-    -v "$(pwd)/testdata:/opt/keycloak/data/import" \
-    -p 8080:8080 \
-    --name gocloak-test \
-    quay.io/keycloak/keycloak:latest start-dev --import-realm
-
-go test
+docker-compose up -d
 ```
 
-To remove running docker container after completion of tests:
+To remove running docker container afterwards:
 
 ```shell
-docker stop gocloak-test
-docker rm gocloak-test
+docker-compose down
+```
+
+To run the tests simply use:
+
+```shell
+make test-all
 ```

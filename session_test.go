@@ -1,8 +1,9 @@
-package gocloaksession
+package gocloaksession_test
 
 import (
 	"testing"
 
+	"github.com/Clarilab/gocloaksession"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,81 +15,100 @@ const (
 	gocloakClientSecret = "gocloak-secret"
 )
 
-func initializeSession(t testing.TB) *goCloakSession {
-	session, err := NewSession(gocloakClientID, gocloakClientSecret, gocloakRealm, gocloakHostname)
+func initializeSession(t testing.TB) gocloaksession.GoCloakSession {
+	session, err := gocloaksession.NewSession(gocloakClientID, gocloakClientSecret, gocloakRealm, gocloakHostname)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
 
-	return session.(*goCloakSession)
+	return session.(gocloaksession.GoCloakSession)
 }
 
-func Test_GetKeycloakAuthToken_Authentication(t *testing.T) {
+func Test_Integration_GetKeycloakAuthToken_Authentication(t *testing.T) {
+	t.Parallel()
+
 	session := initializeSession(t)
 
 	token, err := session.GetKeycloakAuthToken()
-
-	assert.NoError(t, err, "Login failed")
+	require.NoError(t, err, "Login failed")
 	assert.NotZero(t, token.AccessToken, "Token is not set")
 }
 
-func Test_GetKeycloakAuthToken_StillValid(t *testing.T) {
+func Test_Integration_GetKeycloakAuthToken_StillValid(t *testing.T) {
+	t.Parallel()
+
 	session := initializeSession(t)
 
-	_ = session.authenticate()
+	_ = session.ForceAuthenticate()
 
-	require.NotNil(t, session.token, "Token is not set")
-	require.NotZero(t, session.token.AccessToken, "Token is not set")
-	require.NotZero(t, session.token.RefreshToken, "Token is not set")
+	oldToken, err := session.GetKeycloakAuthToken()
+	require.NoError(t, err, "failed to retrieve old token")
+	require.NotNil(t, oldToken, "Token is not set")
+	require.NotZero(t, oldToken.AccessToken, "AccessToken is not set")
+	require.NotZero(t, oldToken.RefreshToken, "RefreshToken is not set")
 
-	oldToken := session.token.AccessToken
+	newToken, err := session.GetKeycloakAuthToken()
+	assert.NoError(t, err, "failed to retrieve new token")
 
-	token, err := session.GetKeycloakAuthToken()
-
-	assert.NoError(t, err, "refreshToken failed")
-	assert.Equal(t, oldToken, token.AccessToken, "New AccessToken given, but expecting the old is still valid")
+	assert.Equal(t, oldToken.AccessToken, newToken.AccessToken, "New AccessToken given, but expecting the old is still valid")
 }
 
-func Test_GetKeycloakAuthToken_Refresh(t *testing.T) {
+func Test_Integration_GetKeycloakAuthToken_Refresh(t *testing.T) {
+	t.Parallel()
+
 	session := initializeSession(t)
 
-	_ = session.authenticate()
+	_ = session.ForceAuthenticate()
 
-	require.NotNil(t, session.token, "Token is not set")
-	require.NotZero(t, session.token.AccessToken, "Token is not set")
-	require.NotZero(t, session.token.RefreshToken, "Token is not set")
+	oldToken, err := session.GetKeycloakAuthToken()
+	require.NoError(t, err, "Failed to retrieve token")
 
-	oldToken := session.token.AccessToken
-	session.token.AccessToken = ""
+	require.NotNil(t, oldToken, "Token is not set")
+	require.NotZero(t, oldToken.AccessToken, "Token is not set")
+	require.NotZero(t, oldToken.RefreshToken, "Token is not set")
 
-	token, err := session.GetKeycloakAuthToken()
+	oldToken.AccessToken = ""
 
-	assert.NoError(t, err, "refreshToken failed")
-	assert.NotEqual(t, oldToken, token.AccessToken, "No new AccessToken given")
+	newToken, err := session.GetKeycloakAuthToken()
+	assert.NoError(t, err, "failed to retrieve token")
+
+	assert.NotEqual(t, oldToken.AccessToken, newToken.AccessToken, "No new AccessToken given")
 }
 
-func Test_refreshToken(t *testing.T) {
+func Test_Integration_refreshToken(t *testing.T) {
+	t.Parallel()
+
 	session := initializeSession(t)
 
-	_ = session.authenticate()
+	_ = session.ForceAuthenticate()
 
-	require.NotNil(t, session.token, "Token is not set")
-	require.NotZero(t, session.token.AccessToken, "Token is not set")
-	require.NotZero(t, session.token.RefreshToken, "Token is not set")
+	oldToken, err := session.GetKeycloakAuthToken()
+	require.NoError(t, err, "Failed to retrieve token")
 
-	oldToken := session.token.AccessToken
-	err := session.refreshToken()
+	require.NotNil(t, oldToken, "Token is not set")
+	require.NotZero(t, oldToken.AccessToken, "Token is not set")
+	require.NotZero(t, oldToken.RefreshToken, "Token is not set")
 
-	assert.NoError(t, err, "refreshToken failed")
-	assert.NotEqual(t, oldToken, session.token.AccessToken, "No new AccessToken given")
+	err = session.ForceRefresh()
+	require.NoError(t, err, "Failed to refresh token")
+
+	newToken, err := session.GetKeycloakAuthToken()
+	require.NoError(t, err, "Failed to retrieve token")
+
+	assert.NotEqual(t, oldToken.AccessToken, newToken.AccessToken, "No new AccessToken given")
 }
 
-func Test_authenticate(t *testing.T) {
+func Test_Integration_authenticate(t *testing.T) {
+	t.Parallel()
+
 	session := initializeSession(t)
 
-	err := session.authenticate()
-
+	err := session.ForceAuthenticate()
 	assert.NoError(t, err, "authenticate failed")
-	assert.NotZero(t, session.token.AccessToken, "Token is not set")
+
+	token, err := session.GetKeycloakAuthToken()
+	require.NoError(t, err, "Failed to retrieve token")
+
+	assert.NotZero(t, token.AccessToken, "Token is not set")
 }
