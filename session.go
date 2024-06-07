@@ -8,6 +8,13 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+)
+
+const (
+	headerAuthorization = "Authorization"
 )
 
 // FunctionalOption configures a Session
@@ -166,11 +173,8 @@ func (s *goCloakSession) isRefreshTokenValid() bool {
 	}
 
 	sessionExpiry := s.token.RefreshExpiresIn - s.prematureRefreshTokenRefreshThreshold
-	if int(time.Since(*s.lastRequest).Seconds()) > sessionExpiry {
-		return false
-	}
 
-	return true
+	return int(time.Since(*s.lastRequest).Seconds()) <= sessionExpiry
 }
 
 func (s *goCloakSession) refreshToken() error {
@@ -221,11 +225,68 @@ func (s *goCloakSession) AddAuthTokenToRequest(client *resty.Client, request *re
 		tokenType = token.TokenType
 	}
 
-	request.Header.Set("Authorization", tokenType+" "+token.AccessToken)
+	request.Header.Set(headerAuthorization, tokenType+" "+token.AccessToken)
 
 	return nil
 }
 
+func (s *goCloakSession) GRPCUnaryAuthenticate() grpc.UnaryClientInterceptor {
+	return func(
+		ctx context.Context,
+		method string,
+		req, reply any,
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		token, err := s.GetKeycloakAuthToken()
+		if err != nil {
+			return err
+		}
+
+		var tokenType string
+		switch token.TokenType {
+		case "bearer":
+			tokenType = "Bearer"
+		default:
+			tokenType = token.TokenType
+		}
+
+		ctx = metadata.AppendToOutgoingContext(ctx, headerAuthorization, tokenType+" "+token.AccessToken)
+
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
+}
+
+func (s *goCloakSession) GRPCStreamAuthenticate() grpc.StreamClientInterceptor {
+	return func(
+		ctx context.Context,
+		desc *grpc.StreamDesc,
+		cc *grpc.ClientConn,
+		method string,
+		streamer grpc.Streamer,
+		opts ...grpc.CallOption,
+	) (grpc.ClientStream, error) {
+		token, err := s.GetKeycloakAuthToken()
+		if err != nil {
+			return nil, err
+		}
+
+		var tokenType string
+		switch token.TokenType {
+		case "bearer":
+			tokenType = "Bearer"
+		default:
+			tokenType = token.TokenType
+		}
+
+		ctx = metadata.AppendToOutgoingContext(ctx, headerAuthorization, tokenType+" "+token.AccessToken)
+
+		return streamer(ctx, desc, cc, method, opts...)
+	}
+}
+
+// Stream creates a stream client interceptor.
 func (s *goCloakSession) GetGoCloakInstance() *gocloak.GoCloak {
 	return s.gocloak
 }

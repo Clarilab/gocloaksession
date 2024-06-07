@@ -22,7 +22,7 @@ func initializeSession(t testing.TB) gocloaksession.GoCloakSession {
 		t.FailNow()
 	}
 
-	return session.(gocloaksession.GoCloakSession)
+	return session
 }
 
 func Test_Integration_GetKeycloakAuthToken_Authentication(t *testing.T) {
