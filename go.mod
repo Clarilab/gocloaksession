@@ -1,7 +1,6 @@
 module github.com/Clarilab/gocloaksession
 
 go 1.22
-
 toolchain go1.23.5
 
 require (
@@ -9,7 +8,7 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
-	google.golang.org/grpc v1.70.0
+	google.golang.org/grpc v1.71.0
 )
 
 require (
