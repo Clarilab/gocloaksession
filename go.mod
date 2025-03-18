@@ -1,7 +1,8 @@
 module github.com/Clarilab/gocloaksession
 
-go 1.22
-toolchain go1.23.5
+go 1.22.0
+
+toolchain go1.24.1
 
 require (
 	github.com/Nerzal/gocloak/v13 v13.9.0
