@@ -7,7 +7,7 @@ require (
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.12.1
-	google.golang.org/grpc v1.83.1
+	google.golang.org/grpc v1.83.2
 )
 
 require (
