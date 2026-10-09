@@ -1,20 +1,9 @@
 #!/bin/sh
+set -e
 
-docker-compose down
-docker-compose up -d
+trap 'docker compose down' EXIT
 
-keycloakServer=http://localhost:8080
-url="${keycloakServer}/health"
-echo "Checking service availability at $url (CTRL+C to exit)"
-while true; do
-    response=$(curl -s -o /dev/null -w "%{http_code}" $url)
-    if [ $response -eq 200 ]; then
-        break
-    fi
-    sleep 1
-done
-echo "Service is now available at ${keycloakServer}"
+docker compose down
+docker compose up -d --wait --wait-timeout 180
 
-go test -failfast -race -cover -v -run Integration -coverprofile=coverage.out -covermode=atomic
-
-docker-compose down
+go test -failfast -race -cover -v -run Integration -coverprofile=coverage-integration.out -covermode=atomic

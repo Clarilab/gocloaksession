@@ -8,7 +8,6 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -25,7 +24,7 @@ type FunctionalOption func(*goCloakSession) error
 type RequestSkipper func(*resty.Request) bool
 
 // SubstringRequestSkipper is a RequestSkipper that skips a request when the
-// url in the request contains a certain substring
+// URL of the request contains the given substring
 func SubstringRequestSkipper(subStr string) RequestSkipper {
 	return func(r *resty.Request) bool {
 		return strings.Contains(r.URL, subStr)
@@ -36,16 +35,18 @@ func SubstringRequestSkipper(subStr string) RequestSkipper {
 func RequestSkipperCallOption(requestSkipper RequestSkipper) FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.skipConditions = append(gcs.skipConditions, requestSkipper)
+
 		return nil
 	}
 }
 
-// PrematureRefreshThresholdOption sets the threshold for a premature token
-// refresh
+// PrematureRefreshThresholdOption sets how long before their expiry the access
+// and refresh tokens are considered expired and get renewed
 func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.prematureRefreshTokenRefreshThreshold = int(refreshToken.Seconds())
 		gcs.prematureAccessTokenRefreshThreshold = int(accessToken.Seconds())
+
 		return nil
 	}
 }
@@ -54,30 +55,35 @@ func PrematureRefreshThresholdOption(accessToken, refreshToken time.Duration) Fu
 func WithWildFlySupport(uri string) FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.gocloak = gocloak.NewClient(uri, gocloak.SetLegacyWildFlySupport())
+
 		return nil
 	}
 }
 
-// SetGocloak manually set a goCloak client.
+// SetGocloak manually sets the GoCloak client.
 func SetGocloak(gc *gocloak.GoCloak) FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.gocloak = gc
+
 		return nil
 	}
 }
 
-// SetSkipRefreshToken configures gocloakSession to skip refresh tokens.
+// SetSkipRefreshToken configures the session to never use the refresh token
+// and always re-authenticate once the access token has expired.
 func SetSkipRefreshToken() FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.skipRefresh = true
+
 		return nil
 	}
 }
 
-// WithScopes sets the scopes to use when making requests.
+// WithScopes sets the scopes requested when logging in the client.
 func WithScopes(scopes ...string) FunctionalOption {
 	return func(gcs *goCloakSession) error {
 		gcs.scopes = scopes
+
 		return nil
 	}
 }
@@ -96,7 +102,8 @@ type goCloakSession struct {
 	scopes                                []string
 }
 
-// NewSession returns a new instance of a gocloak Session
+// NewSession returns a new GoCloakSession for the given client credentials,
+// realm and Keycloak URI
 func NewSession(clientID, clientSecret, realm, uri string, option ...FunctionalOption) (GoCloakSession, error) {
 	session := &goCloakSession{
 		clientID:                              clientID,
@@ -145,6 +152,74 @@ func (s *goCloakSession) GetKeycloakAuthToken() (*gocloak.JWT, error) {
 	return s.token, nil
 }
 
+func (s *goCloakSession) AddAuthTokenToRequest(_ *resty.Client, request *resty.Request) error {
+	for _, shouldSkip := range s.skipConditions {
+		if shouldSkip(request) {
+			return nil
+		}
+	}
+
+	token, err := s.GetKeycloakAuthToken()
+	if err != nil {
+		return err
+	}
+
+	tokenType := parseTokenType(token)
+
+	request.Header.Set(headerAuthorization, tokenType+" "+token.AccessToken)
+
+	return nil
+}
+
+func (s *goCloakSession) GRPCUnaryAuthenticate() grpc.UnaryClientInterceptor {
+	return func(
+		ctx context.Context,
+		method string,
+		req, reply any,
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		token, err := s.GetKeycloakAuthToken()
+		if err != nil {
+			return err
+		}
+
+		tokenType := parseTokenType(token)
+
+		ctx = metadata.AppendToOutgoingContext(ctx, headerAuthorization, tokenType+" "+token.AccessToken)
+
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
+}
+
+func (s *goCloakSession) GRPCStreamAuthenticate() grpc.StreamClientInterceptor {
+	return func(
+		ctx context.Context,
+		desc *grpc.StreamDesc,
+		cc *grpc.ClientConn,
+		method string,
+		streamer grpc.Streamer,
+		opts ...grpc.CallOption,
+	) (grpc.ClientStream, error) {
+		token, err := s.GetKeycloakAuthToken()
+		if err != nil {
+			return nil, err
+		}
+
+		tokenType := parseTokenType(token)
+
+		ctx = metadata.AppendToOutgoingContext(ctx, headerAuthorization, tokenType+" "+token.AccessToken)
+
+		return streamer(ctx, desc, cc, method, opts...)
+	}
+}
+
+// GetGoCloakInstance returns the underlying GoCloak client.
+func (s *goCloakSession) GetGoCloakInstance() *gocloak.GoCloak {
+	return s.gocloak
+}
+
 func (s *goCloakSession) isAccessTokenValid() bool {
 	if s.token == nil {
 		return false
@@ -160,6 +235,7 @@ func (s *goCloakSession) isAccessTokenValid() bool {
 	}
 
 	token, _, err := s.gocloak.DecodeAccessToken(context.Background(), s.token.AccessToken, s.realm)
+
 	return err == nil && token.Valid
 }
 
@@ -178,6 +254,10 @@ func (s *goCloakSession) isRefreshTokenValid() bool {
 }
 
 func (s *goCloakSession) refreshToken() error {
+	if s.token == nil {
+		return errors.New("could not refresh keycloak-token: no token to refresh")
+	}
+
 	now := time.Now()
 	s.lastRequest = &now
 
@@ -205,88 +285,12 @@ func (s *goCloakSession) authenticate() error {
 	return nil
 }
 
-func (s *goCloakSession) AddAuthTokenToRequest(client *resty.Client, request *resty.Request) error {
-	for _, shouldSkip := range s.skipConditions {
-		if shouldSkip(request) {
-			return nil
-		}
-	}
-
-	token, err := s.GetKeycloakAuthToken()
-	if err != nil {
-		return err
-	}
-
-	var tokenType string
+// parseTokenType either correct lowercase Bearer token type, or returns current value.
+func parseTokenType(token *gocloak.JWT) string {
 	switch token.TokenType {
 	case "bearer":
-		tokenType = "Bearer"
+		return "Bearer"
 	default:
-		tokenType = token.TokenType
+		return token.TokenType
 	}
-
-	request.Header.Set(headerAuthorization, tokenType+" "+token.AccessToken)
-
-	return nil
-}
-
-func (s *goCloakSession) GRPCUnaryAuthenticate() grpc.UnaryClientInterceptor {
-	return func(
-		ctx context.Context,
-		method string,
-		req, reply any,
-		cc *grpc.ClientConn,
-		invoker grpc.UnaryInvoker,
-		opts ...grpc.CallOption,
-	) error {
-		token, err := s.GetKeycloakAuthToken()
-		if err != nil {
-			return err
-		}
-
-		var tokenType string
-		switch token.TokenType {
-		case "bearer":
-			tokenType = "Bearer"
-		default:
-			tokenType = token.TokenType
-		}
-
-		ctx = metadata.AppendToOutgoingContext(ctx, headerAuthorization, tokenType+" "+token.AccessToken)
-
-		return invoker(ctx, method, req, reply, cc, opts...)
-	}
-}
-
-func (s *goCloakSession) GRPCStreamAuthenticate() grpc.StreamClientInterceptor {
-	return func(
-		ctx context.Context,
-		desc *grpc.StreamDesc,
-		cc *grpc.ClientConn,
-		method string,
-		streamer grpc.Streamer,
-		opts ...grpc.CallOption,
-	) (grpc.ClientStream, error) {
-		token, err := s.GetKeycloakAuthToken()
-		if err != nil {
-			return nil, err
-		}
-
-		var tokenType string
-		switch token.TokenType {
-		case "bearer":
-			tokenType = "Bearer"
-		default:
-			tokenType = token.TokenType
-		}
-
-		ctx = metadata.AppendToOutgoingContext(ctx, headerAuthorization, tokenType+" "+token.AccessToken)
-
-		return streamer(ctx, desc, cc, method, opts...)
-	}
-}
-
-// Stream creates a stream client interceptor.
-func (s *goCloakSession) GetGoCloakInstance() *gocloak.GoCloak {
-	return s.gocloak
 }

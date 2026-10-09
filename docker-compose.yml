@@ -1,22 +1,19 @@
-version: '3.4'
-
-volumes:
-  keycloak:
-
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:21.0
+    image: quay.io/keycloak/keycloak:26.8
+    command: ["start-dev", "--import-realm"]
     environment:
       KC_HOSTNAME: localhost
       KC_HEALTH_ENABLED: "true"
     ports:
       - "8080:8080"
     healthcheck:
-      test: curl --fail --silent http://localhost:8080/health/ready 2>&1 || exit 1
-      interval: 10s
-      timeout: 10s
-      retries: 5
+      # The Keycloak image ships without curl, so the readiness endpoint on the
+      # management port is queried via bash's /dev/tcp.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
     volumes:
-      -  ./testdata/gocloak-realm.json:/opt/keycloak/data/import/gocloak-realm.json
-    entrypoint: ["/opt/keycloak/bin/kc.sh", "start-dev --import-realm"]
-
+      - ./testdata/gocloak-realm.json:/opt/keycloak/data/import/gocloak-realm.json

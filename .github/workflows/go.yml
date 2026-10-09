@@ -9,18 +9,22 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
-  
+
+permissions:
+  contents: read
+
 jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
 
     - name: Set up Go
       uses: actions/setup-go@v7
       with:
-        go-version: ">=1.21.0"
+        go-version-file: go.mod
 
     - name: Vet
       run: go vet ./...
@@ -36,5 +40,5 @@ jobs:
       uses: golang/govulncheck-action@v1
       with:
         go-package: ./...
-        go-version-input: ">=1.21.0"
+        go-version-input: stable
         check-latest: true

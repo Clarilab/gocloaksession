@@ -15,11 +15,13 @@ const (
 	gocloakClientSecret = "gocloak-secret"
 )
 
-func initializeSession(t testing.TB) gocloaksession.GoCloakSession {
+func initializeSession(tb testing.TB) gocloaksession.GoCloakSession {
+	tb.Helper()
+
 	session, err := gocloaksession.NewSession(gocloakClientID, gocloakClientSecret, gocloakRealm, gocloakHostname)
 	if err != nil {
-		t.Log(err)
-		t.FailNow()
+		tb.Log(err)
+		tb.FailNow()
 	}
 
 	return session
@@ -32,7 +34,7 @@ func Test_Integration_GetKeycloakAuthToken_Authentication(t *testing.T) {
 
 	token, err := session.GetKeycloakAuthToken()
 	require.NoError(t, err, "Login failed")
-	assert.NotZero(t, token.AccessToken, "Token is not set")
+	assert.NotEmpty(t, token.AccessToken, "Token is not set")
 }
 
 func Test_Integration_GetKeycloakAuthToken_StillValid(t *testing.T) {
@@ -45,11 +47,11 @@ func Test_Integration_GetKeycloakAuthToken_StillValid(t *testing.T) {
 	oldToken, err := session.GetKeycloakAuthToken()
 	require.NoError(t, err, "failed to retrieve old token")
 	require.NotNil(t, oldToken, "Token is not set")
-	require.NotZero(t, oldToken.AccessToken, "AccessToken is not set")
-	require.NotZero(t, oldToken.RefreshToken, "RefreshToken is not set")
+	require.NotEmpty(t, oldToken.AccessToken, "AccessToken is not set")
+	require.NotEmpty(t, oldToken.RefreshToken, "RefreshToken is not set")
 
 	newToken, err := session.GetKeycloakAuthToken()
-	assert.NoError(t, err, "failed to retrieve new token")
+	require.NoError(t, err, "failed to retrieve new token")
 
 	assert.Equal(t, oldToken.AccessToken, newToken.AccessToken, "New AccessToken given, but expecting the old is still valid")
 }
@@ -65,13 +67,13 @@ func Test_Integration_GetKeycloakAuthToken_Refresh(t *testing.T) {
 	require.NoError(t, err, "Failed to retrieve token")
 
 	require.NotNil(t, oldToken, "Token is not set")
-	require.NotZero(t, oldToken.AccessToken, "Token is not set")
-	require.NotZero(t, oldToken.RefreshToken, "Token is not set")
+	require.NotEmpty(t, oldToken.AccessToken, "Token is not set")
+	require.NotEmpty(t, oldToken.RefreshToken, "Token is not set")
 
 	oldToken.AccessToken = ""
 
 	newToken, err := session.GetKeycloakAuthToken()
-	assert.NoError(t, err, "failed to retrieve token")
+	require.NoError(t, err, "failed to retrieve token")
 
 	assert.NotEqual(t, oldToken.AccessToken, newToken.AccessToken, "No new AccessToken given")
 }
@@ -87,8 +89,8 @@ func Test_Integration_refreshToken(t *testing.T) {
 	require.NoError(t, err, "Failed to retrieve token")
 
 	require.NotNil(t, oldToken, "Token is not set")
-	require.NotZero(t, oldToken.AccessToken, "Token is not set")
-	require.NotZero(t, oldToken.RefreshToken, "Token is not set")
+	require.NotEmpty(t, oldToken.AccessToken, "Token is not set")
+	require.NotEmpty(t, oldToken.RefreshToken, "Token is not set")
 
 	err = session.ForceRefresh()
 	require.NoError(t, err, "Failed to refresh token")
@@ -105,10 +107,19 @@ func Test_Integration_authenticate(t *testing.T) {
 	session := initializeSession(t)
 
 	err := session.ForceAuthenticate()
-	assert.NoError(t, err, "authenticate failed")
+	require.NoError(t, err, "authenticate failed")
 
 	token, err := session.GetKeycloakAuthToken()
 	require.NoError(t, err, "Failed to retrieve token")
 
-	assert.NotZero(t, token.AccessToken, "Token is not set")
+	assert.NotEmpty(t, token.AccessToken, "Token is not set")
+}
+
+func Test_ForceRefresh_WithoutToken(t *testing.T) {
+	t.Parallel()
+
+	session := initializeSession(t)
+
+	err := session.ForceRefresh()
+	assert.Error(t, err, "expected an error when refreshing without a token")
 }
