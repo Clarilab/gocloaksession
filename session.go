@@ -2,6 +2,8 @@ package gocloaksession
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -88,6 +90,22 @@ func WithScopes(scopes ...string) FunctionalOption {
 	}
 }
 
+// WithClientAssertionFile authenticates with the JWT stored at path
+// (client_assertion, RFC 7523) instead of the client secret. The file is read
+// on every login because its token is short-lived and rotated externally,
+// e.g. a Kubernetes projected service account token. Refreshing is disabled,
+// since a refresh would need the assertion too; an expired access token
+// triggers a new login instead. If a client secret is set as well, it is used
+// as fallback when Keycloak rejects the assertion with invalid_client.
+func WithClientAssertionFile(path string) FunctionalOption {
+	return func(gcs *goCloakSession) error {
+		gcs.clientAssertionFile = path
+		gcs.skipRefresh = true
+
+		return nil
+	}
+}
+
 type goCloakSession struct {
 	clientID                              string
 	clientSecret                          string
@@ -100,6 +118,7 @@ type goCloakSession struct {
 	prematureAccessTokenRefreshThreshold  int
 	skipRefresh                           bool
 	scopes                                []string
+	clientAssertionFile                   string
 }
 
 // NewSession returns a new GoCloakSession for the given client credentials,
@@ -275,7 +294,7 @@ func (s *goCloakSession) authenticate() error {
 	now := time.Now()
 	s.lastRequest = &now
 
-	jwt, err := s.gocloak.LoginClient(context.Background(), s.clientID, s.clientSecret, s.realm, s.scopes...)
+	jwt, err := s.login(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "could not login to keycloak")
 	}
@@ -283,6 +302,61 @@ func (s *goCloakSession) authenticate() error {
 	s.token = jwt
 
 	return nil
+}
+
+func (s *goCloakSession) login(ctx context.Context) (*gocloak.JWT, error) {
+	if s.clientAssertionFile == "" {
+		return s.gocloak.LoginClient(ctx, s.clientID, s.clientSecret, s.realm, s.scopes...)
+	}
+
+	jwt, err := s.loginWithClientAssertion(ctx)
+	if err == nil {
+		slog.InfoContext(ctx, "keycloak login", slog.String("clientID", s.clientID), slog.String("method", "client_assertion"))
+
+		return jwt, nil
+	}
+
+	if s.clientSecret == "" || !isInvalidClient(err) {
+		return nil, err
+	}
+
+	jwt, err = s.gocloak.LoginClient(ctx, s.clientID, s.clientSecret, s.realm, s.scopes...)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.InfoContext(ctx, "keycloak login", slog.String("clientID", s.clientID), slog.String("method", "client_secret_fallback"))
+
+	return jwt, nil
+}
+
+func (s *goCloakSession) loginWithClientAssertion(ctx context.Context) (*gocloak.JWT, error) {
+	assertion, err := os.ReadFile(s.clientAssertionFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read client assertion")
+	}
+
+	options := gocloak.TokenOptions{
+		GrantType:           new("client_credentials"),
+		ClientAssertionType: new("urn:ietf:params:oauth:client-assertion-type:jwt-bearer"),
+		ClientAssertion:     new(strings.TrimSpace(string(assertion))),
+	}
+	if s.clientID != "" {
+		options.ClientID = &s.clientID
+	}
+
+	if len(s.scopes) > 0 {
+		options.Scope = new(strings.Join(s.scopes, " "))
+	}
+
+	return s.gocloak.GetToken(ctx, s.realm, options)
+}
+
+// isInvalidClient reports whether Keycloak rejected the client authentication.
+func isInvalidClient(err error) bool {
+	var apiErr *gocloak.APIError
+
+	return errors.As(err, &apiErr) && strings.Contains(apiErr.Message, "invalid_client")
 }
 
 // parseTokenType either correct lowercase Bearer token type, or returns current value.

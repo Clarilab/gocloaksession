@@ -1,23 +1,23 @@
 module github.com/Clarilab/gocloaksession
 
-go 1.27.2
+go 1.27.4
 
 require (
 	github.com/Nerzal/gocloak/v13 v13.9.0
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.12.1
-	google.golang.org/grpc v1.84.0
+	google.golang.org/grpc v1.85.0
 )
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/net v0.60.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20261005182115-fad411399dd8 // indirect
+	go.yaml.in/yaml/v3 v3.0.6 // indirect
+	golang.org/x/net v0.63.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20261116203732-fd2c7689a808 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
